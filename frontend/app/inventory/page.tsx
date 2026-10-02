@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Search,
   Sparkles,
+  Table,
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
@@ -261,7 +262,15 @@ export default function InventoryPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/audit"
+              className="flex h-11 items-center gap-2 rounded-xl border border-purple-500/30 bg-purple-500/10 px-4 text-sm font-medium text-purple-300 transition hover:border-purple-400/50 hover:bg-purple-500/20 hover:text-purple-200 active:scale-95"
+            >
+              <Table className="h-4 w-4" />
+              Audit Console
+            </Link>
+
             <button
               type="button"
               onClick={() => fetchInventory(true)}
@@ -285,6 +294,7 @@ export default function InventoryPage() {
               Add Product
             </Link>
           </div>
+
         </div>
 
         {/* Stats */}

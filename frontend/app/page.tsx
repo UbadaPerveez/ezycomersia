@@ -232,7 +232,8 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-5 py-16 sm:px-7 lg:px-8 lg:py-24">
           <div className="max-w-2xl">
             <div className="text-[9px] font-bold tracking-[0.28em] text-cyan-200">THE OPERATIONS GAP</div>
-            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">Manual catalog cleanup breaks under volume.</h2>
+            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">MESSY PARAGRAPH OF PRODUCTS - to 
+              Clear, Understandable, Normalized, CATALOGUE CONVERTER.</h2>
             <p className="mt-4 text-sm leading-6 text-slate-500 sm:text-base">Supplier information is rarely delivered in the clean, uniform shape that modern commerce systems expect.</p>
           </div>
 
