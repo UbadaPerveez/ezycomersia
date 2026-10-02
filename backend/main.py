@@ -1,16 +1,25 @@
-from fastapi import FastAPI, HTTPException
+import os
+import shutil
+import json
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
 from langchain_ollama import ChatOllama
-import json
+from dotenv import load_dotenv
+
+# Import feature routers natively
 from auth import router as auth_router
 from inventory import router as inventory_router
 from audit import router as audit_router
-from pdf_normalizer import router as pdf_router
+from pdf_normalizer import process_pdf_catalog
+
+# Initialize system environment configurations
+load_dotenv()
 
 app = FastAPI(title="ezycomersia World-Class Agentic Engine")
 
+# Fully open CORS configuration to guarantee cross-port communication passes cleanly
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,10 +27,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include administrative routing structures
 app.include_router(auth_router)
 app.include_router(inventory_router)
 app.include_router(audit_router)
-app.include_router(pdf_router)
+
 class AgentRequest(BaseModel):
     prompt: str
 
@@ -29,7 +40,7 @@ try:
     # Initialize the local free AI engine
     local_brain = ChatOllama(
         model="llama3.2:3b",
-        temperature=0.0, # Added slight creativity so it can brainstorm schemas for any item group
+        temperature=0.0,
         format="json"
     )
 except Exception:
@@ -45,9 +56,8 @@ async def execute_agent_loop(request: AgentRequest):
     if not local_brain:
         raise HTTPException(status_code=500, detail="Local AI core engine offline.")
 
-    # 🌐 DYNAMIC ROUTE 1: Dynamic Data Grid Table Generator (Handles any category in the world)
+    # 🌐 DYNAMIC ROUTE 1: Dynamic Data Grid Table Generator
     if "audit" in user_prompt_lower or "queue" in user_prompt_lower or "list" in user_prompt_lower:
-        # We ask Llama to think of the properties and generate structural table rows automatically
         system_instruction = (
             "You are an enterprise system database manager. The user wants to see an inventory audit queue table "
             "for a specific product type or category. Generate a valid JSON object matching this structure:\n"
@@ -69,7 +79,7 @@ async def execute_agent_loop(request: AgentRequest):
             parsed_table_data = json.loads(ai_response.content)
             
             return {
-                "agent_message": f"Successfully initialized real-time database schema modeling for your request. Rendering active data grid widget:",
+                "agent_message": "Successfully initialized real-time database schema modeling for your request. Rendering active data grid widget:",
                 "widget_type": "AUDIT_GRID",
                 "widget_data": parsed_table_data
             }
@@ -124,6 +134,27 @@ async def execute_agent_loop(request: AgentRequest):
                     "dimensions": None
                 }
             }
+
+# 🌌 MULTIMODAL INGESTION PROTOCOL ROUTE FOR THE GEMINI PDF CONVERTER
+@app.post("/api/pdf/normalize")
+async def upload_and_normalize_pdf(file: UploadFile = File(...)):
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Invalid extension. System handles .pdf files only.")
+    
+    # Safely save the uploaded bytes block into a temporary disk path structure
+    temp_path = f"temp_{file.filename}"
+    with open(temp_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    try:
+        # Invoke the custom Gemini document chunk interpreter pipeline
+        normalized_rows = await process_pdf_catalog(temp_path)
+        return {"products": normalized_rows}
+    except Exception as err:
+        raise HTTPException(status_code=500, detail=f"Gemini PDF processing exception: {str(err)}")
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
 
 if __name__ == "__main__":
     import uvicorn

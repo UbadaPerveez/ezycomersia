@@ -1,176 +1,75 @@
-import io
-import json
 import os
-from typing import Optional, List, Dict, Any
-
-from dotenv import load_dotenv
-from fastapi import APIRouter, File, UploadFile, HTTPException, Header
-from pydantic import BaseModel
-from pypdf import PdfReader
+import json
+from typing import Optional, List
+from pydantic import BaseModel, Field
 from google import genai
-from jose import jwt, JWTError
+from google.genai import types
 
-from auth import get_db, SECRET_KEY, ALGORITHM
+# 1. Define the structural row data blueprint matching your frontend
+class ProductSpec(BaseModel):
+    product_name: str = Field(description="Full product item designation name as written")
+    brand: Optional[str] = Field(None, description="Brand name if explicitly stated, otherwise null")
+    model: Optional[str] = Field(None, description="Model number, version, or version string, otherwise null")
+    manufacturer: Optional[str] = Field(None, description="Manufacturing company name if stated, otherwise null")
+    category: Optional[str] = Field(None, description="Primary catalog taxonomy or category division, otherwise null")
+    part_number: Optional[str] = Field(None, description="SKU identification code or part number, otherwise null")
+    material: Optional[str] = Field(None, description="Material build composition details, otherwise null")
+    dimensions: Optional[str] = Field(None, description="Sizing, length metrics, or dimensions, otherwise null")
 
-load_dotenv()
+# 2. 👇 FIXED LAYER: Wrap the list inside a parent Pydantic class structure
+class CatalogContainer(BaseModel):
+    products: List[ProductSpec] = Field(description="A comprehensive array list of all extracted catalog products")
 
-router = APIRouter(prefix="/api/pdf", tags=["PDF Normalizer"])
+async def process_pdf_catalog(file_path: str) -> list:
+    """Passes the complete PDF file binary straight to Gemini and enforces structural array returns."""
+    
+    # Securely retrieve your API key from the local computer's environment flags
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("System Environment Variable 'GEMINI_API_KEY' is missing. Configure it in terminal first.")
+    
+    # Initialize the modern, official Google GenAI system client instance
+    client = genai.Client(api_key=api_key)
+    
+    # Read the raw file bytes directly from storage to stream the whole binary across the wire
+    with open(file_path, "rb") as f:
+        pdf_bytes = f.read()
 
-# ---------------------------------------------------------
-# AI Client Configuration
-# ---------------------------------------------------------
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if not GEMINI_API_KEY:
-    raise RuntimeError("GEMINI_API_KEY is not configured in backend/.env")
+    prompt_instruction = (
+        "Analyze this catalog document carefully. Extract every individual product listing "
+        "and map their technical attributes into the requested structural schema array layout. "
+        "Use null if an attribute is omitted. Never invent, guess, or synthesize parameter entries."
+    )
 
-gemini_client = genai.Client(api_key=GEMINI_API_KEY)
-AI_MODEL = "gemini-2.5-flash"
-
-
-def get_current_user_id(authorization: Optional[str]) -> Optional[int]:
-    if not authorization or not authorization.startswith("Bearer "):
-        return None
-    token = authorization.split(" ", 1)[1]
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = payload.get("sub")
-        return int(user_id) if user_id else None
-    except (JWTError, ValueError):
-        return None
-
-
-# ---------------------------------------------------------
-# POST /api/pdf/normalize
-# ---------------------------------------------------------
-@router.post("/normalize")
-async def normalize_pdf_catalog(
-    file: UploadFile = File(...),
-    authorization: Optional[str] = Header(default=None)
-):
-    if not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
-
-    # 1. Read PDF and extract text
-    try:
-        file_bytes = await file.read()
-        pdf_reader = PdfReader(io.BytesIO(file_bytes))
-
-        extracted_text = ""
-        # Process up to first 15 pages to keep processing swift
-        max_pages = min(len(pdf_reader.pages), 15)
-        for page_num in range(max_pages):
-            page_text = pdf_reader.pages[page_num].extract_text() or ""
-            extracted_text += f"\n--- PAGE {page_num + 1} ---\n" + page_text
-
-        if not extracted_text.strip():
-            raise HTTPException(
-                status_code=400,
-                detail="Could not extract readable text from this PDF. It may be a scanned image or protected."
+        # Fire a native multi-modal content request straight into Gemini's high-speed pipelines
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=[
+                types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf"),
+                prompt_instruction
+            ],
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                # 👇 TARGET THE WRAPPER CONTAINER INSTEAD OF THE RAW LIST TYPING LAYER
+                response_schema=CatalogContainer,
+                temperature=0.0  # Lock creativity to absolute zero for crisp engineering matches
             )
-
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to read PDF file: {str(e)}")
-
-    # 2. Instruct ezycomersia AI to extract & normalize all products
-    prompt = f"""
-You are the proprietary ezycomersia Enterprise Catalog Ingestion Engine.
-The text below has been extracted from a messy supplier PDF (catalog, quote, invoice, or spec sheet).
-
-TASK:
-1. Identify all distinct products mentioned in the document.
-2. For each product, extract and normalize its technical attributes.
-3. If specs like part_number, material, or dimensions are NOT provided, return null (do not invent).
-4. Preserve the full real product name verbatim.
-
-Return ONLY a valid JSON object matching this exact schema:
-{{
-    "total_products": 0,
-    "products": [
-        {{
-            "product_name": "Full product title",
-            "brand": "Brand name or null",
-            "model": "Model name or null",
-            "manufacturer": "Manufacturer or null",
-            "category": "Normalized high-level category",
-            "part_number": "SKU / MPN or null",
-            "material": "Material or null",
-            "dimensions": "Sizing / measurements or null"
-        }}
-    ]
-}}
-
-DOCUMENT TEXT:
-{extracted_text[:12000]}
-"""
-
-    try:
-        response = gemini_client.models.generate_content(
-            model=AI_MODEL,
-            contents=prompt,
-            config={"response_mime_type": "application/json"}
         )
-
-        response_text = response.text.strip()
-        if response_text.startswith("```"):
-            response_text = response_text.replace("```json", "").replace("```", "").strip()
-
-        result = json.loads(response_text)
-        products = result.get("products", [])
-
-        # Assign fallback SKUs if none were found
-        for idx, prod in enumerate(products, 1):
-            if not prod.get("part_number"):
-                prod["part_number"] = f"SKU-{idx:04d}"
-
-        return {
-            "success": True,
-            "filename": file.filename,
-            "total_products": len(products),
-            "products": products
-        }
-
+        
+        # Correctly load the structured text payload via universal json validation channels
+        raw_text = response.text
+        if not raw_text:
+            return []
+            
+        parsed_json = json.loads(raw_text)
+        
+        # If the model wraps it under the schema's container key, unpack the array cleanly for your frontend
+        if isinstance(parsed_json, dict) and "products" in parsed_json:
+            return parsed_json["products"]
+            
+        return parsed_json
+        
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"AI Normalization failed: {str(e)}")
-
-
-# ---------------------------------------------------------
-# Optional: Bulk Save Extracted Products to Database
-# ---------------------------------------------------------
-class BulkSaveRequest(BaseModel):
-    products: List[Dict[str, Any]]
-    source_filename: str
-
-
-@router.post("/bulk-save")
-async def bulk_save_products(
-    req: BulkSaveRequest,
-    authorization: Optional[str] = Header(default=None)
-):
-    user_id = get_current_user_id(authorization)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Authentication required.")
-
-    conn = get_db()
-    saved_count = 0
-
-    for prod in req.products:
-        p_name = prod.get("product_name") or "Normalized Product"
-        sku = prod.get("part_number") or f"SKU-{saved_count + 1:04d}"
-        cat = prod.get("category")
-        mat = prod.get("material")
-        dim = prod.get("dimensions")
-        raw = f"Imported from PDF: {req.source_filename}"
-
-        conn.execute(
-            """
-            INSERT INTO products (user_id, product_name, part_number, category, material, dimensions, raw_input)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            (user_id, p_name, sku, cat, mat, dim, raw)
-        )
-        saved_count += 1
-
-    conn.commit()
-    conn.close()
-
-    return {"success": True, "saved_count": saved_count}
+        print(f"Gemini Catalog Extraction Error Core: {str(e)}")
+        raise e
