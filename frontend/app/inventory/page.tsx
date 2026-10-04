@@ -72,15 +72,19 @@ export default function InventoryPage() {
       const data: InventoryResponse | { detail?: string } =
         await response.json();
 
+      // 👇 REPAIRED TYPE-GUARD: Separates the success array mapping from the error payload block cleanly
       if (!response.ok) {
+        const errorData = data as { detail?: string };
         throw new Error(
-          "detail" in data && data.detail
-            ? data.detail
+          errorData && errorData.detail
+            ? errorData.detail
             : "Unable to load inventory."
         );
       }
 
-      setProducts(data.products);
+      const successData = data as InventoryResponse;
+      setProducts(successData.products || []);
+
     } catch (err) {
       console.error("Inventory fetch error:", err);
 
