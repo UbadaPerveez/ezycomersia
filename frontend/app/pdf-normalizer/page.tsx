@@ -64,7 +64,7 @@ export default function PDFNormalizerPage() {
       const formData = new FormData();
       formData.append("file", selectedFile);
 
-      const res = await fetch("http://127.0.0.1:8000/api/pdf/normalize", {
+      const res = await fetch("https://ezycomersia-backend.onrender.com", {
         method: "POST",
         headers: {
           ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
@@ -137,7 +137,7 @@ export default function PDFNormalizerPage() {
       const accessToken = localStorage.getItem("access_token");
       if (!accessToken) throw new Error("Please log in to save to inventory.");
 
-      const res = await fetch("http://127.0.0.1:8000/api/pdf/bulk-save", {
+      const res = await fetch("https://ezycomersia-backend.onrender.com", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

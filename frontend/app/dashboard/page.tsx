@@ -53,7 +53,7 @@ export default function DashboardPage() {
         const token = localStorage.getItem("access_token");
         if (!token) return;
 
-        const res = await fetch("http://127.0.0.1:8000/api/inventory", {
+        const res = await fetch("https://ezycomersia-backend.onrender.com", {
           headers: {
             Authorization: `Bearer ${token}`,
           },

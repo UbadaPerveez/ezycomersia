@@ -665,7 +665,7 @@ export default function AgentPage() {
     try {
       const accessToken = localStorage.getItem("access_token");
 
-      const res = await fetch("http://127.0.0.1:8000/api/agent", {
+      const res = await fetch("https://ezycomersia-backend.onrender.com", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -945,7 +945,7 @@ function NormalizationCard({
         formatValue(data.part_number) ||
         `SKU-${Math.floor(100000 + Math.random() * 900000)}`;
 
-      const res = await fetch("http://127.0.0.1:8000/api/inventory", {
+      const res = await fetch("https://ezycomersia-backend.onrender.com", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
