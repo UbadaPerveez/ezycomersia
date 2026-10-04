@@ -20,13 +20,18 @@ load_dotenv()
 app = FastAPI(title="ezycomersia World-Class Agentic Engine")
 
 # Fully open CORS configuration to guarantee cross-port communication passes cleanly
+# 👇 FIXED BOUNDARIES: Replaced wildcard with your explicit live project domains to clear browser credential gates
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://ezycomersia.vercel.app",
+        "https://ezycomersia-ml0jaatr4-ubadaperveez.vercel.app"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # Include administrative routing structures
 app.include_router(auth_router)
