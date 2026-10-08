@@ -72,17 +72,18 @@ class LoginRequest(BaseModel):
 
 
 # ============================================================
-# Password helpers (Direct bcrypt - 100% stable)
+# Password helpers (Direct bcrypt — fixes the 72-byte passlib bug!)
 # ============================================================
 
 def hash_password(password: str) -> str:
-    pwd_bytes = password.encode("utf-8")
+    # Truncate to 72 bytes to satisfy bcrypt specification
+    pwd_bytes = password.encode("utf-8")[:72]
     salt = bcrypt.gensalt()
     return bcrypt.hashpw(pwd_bytes, salt).decode("utf-8")
 
 
 def verify_password(password: str, password_hash: str) -> bool:
-    pwd_bytes = password.encode("utf-8")
+    pwd_bytes = password.encode("utf-8")[:72]
     hash_bytes = password_hash.encode("utf-8")
     return bcrypt.checkpw(pwd_bytes, hash_bytes)
 
@@ -110,7 +111,7 @@ def create_access_token(user_id: int, email: str) -> str:
 
 
 # ============================================================
-# Register Endpoint
+# Register
 # ============================================================
 
 @router.post("/register")
@@ -179,7 +180,7 @@ async def register_user(request: RegisterRequest):
 
 
 # ============================================================
-# Login Endpoint
+# Login
 # ============================================================
 
 @router.post("/login")
