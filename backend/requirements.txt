@@ -7,5 +7,4 @@ bcrypt
 python-jose[cryptography]
 python-dotenv
 google-genai
-langchain-ollama
 python-multipart

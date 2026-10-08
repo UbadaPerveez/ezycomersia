@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
-from langchain_ollama import ChatOllama
+from google import genai
 from dotenv import load_dotenv
 
 # Import feature routers natively
@@ -38,29 +38,60 @@ app.include_router(auth_router)
 app.include_router(inventory_router)
 app.include_router(audit_router)
 
+@app.get("/")
+async def root():
+    return {"status": "ok", "message": "ezycomersia backend is running"}
+
 class AgentRequest(BaseModel):
     prompt: str
 
-try:
-    # Initialize the local free AI engine
-    local_brain = ChatOllama(
-        model="llama3.2:3b",
-        temperature=0.0,
-        format="json"
-    )
-except Exception:
-    local_brain = None
-
+# Initialize Gemini AI (cloud-based, works on Render)
+GEMINI_API_KEY = os.getenv("AIzaSyDPO5OxHWx9h7ZeRuHxuD0-wTzKft7mfm0")
+gemini_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 @app.post("/api/agent")
 async def execute_agent_loop(request: AgentRequest):
     user_prompt = request.prompt.strip()
     user_prompt_lower = user_prompt.lower()
-    
+
     if not user_prompt:
         raise HTTPException(status_code=400, detail="Prompt input empty.")
-    if not local_brain:
-        raise HTTPException(status_code=500, detail="Local AI core engine offline.")
+    if not gemini_client:
+        raise HTTPException(status_code=500, detail="AI engine offline — GEMINI_API_KEY not configured.")
 
+    # Pick system instruction based on what user asked
+    if "audit" in user_prompt_lower or "queue" in user_prompt_lower or "list" in user_prompt_lower:
+        system_instruction = (
+            "You are an enterprise database manager. Generate a valid JSON object:\n"
+            "{\"columns\": [...], \"rows\": [{...}]}\n"
+            "Return ONLY valid JSON. No extra text."
+        )
+    else:
+        system_instruction = (
+            "You are ezycomersia's AI catalog engine. "
+            "Extract and normalize product data. "
+            "Return ONLY a valid JSON object with keys: product_name, part_number, category, material, dimensions, notes."
+        )
+
+    try:
+        response = gemini_client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=f"{system_instruction}\n\nUser input: {user_prompt}",
+        )
+        raw_text = response.text.strip()
+
+        # Strip markdown code fences if Gemini wraps response in ```json ... ```
+        if raw_text.startswith("```"):
+            raw_text = raw_text.split("```")[1]
+            if raw_text.startswith("json"):
+                raw_text = raw_text[4:]
+
+        parsed = json.loads(raw_text)
+        return {"result": parsed}
+
+    except json.JSONDecodeError:
+        return {"result": {"raw_response": response.text}}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI engine error: {str(e)}")
     # 🌐 DYNAMIC ROUTE 1: Dynamic Data Grid Table Generator
     if "audit" in user_prompt_lower or "queue" in user_prompt_lower or "list" in user_prompt_lower:
         system_instruction = (
