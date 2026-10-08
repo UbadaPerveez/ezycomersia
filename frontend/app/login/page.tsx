@@ -17,7 +17,7 @@ export default function LoginPage() {
 
   try {
     const response = await fetch(
-      "https://ezycomersia-backend.onrender.com/",
+      "https://ezycomersia-backend.onrender.com/api/auth/login",
       {
         method: "POST",
         headers: {

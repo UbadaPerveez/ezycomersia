@@ -137,7 +137,7 @@ export default function PDFNormalizerPage() {
       const accessToken = localStorage.getItem("access_token");
       if (!accessToken) throw new Error("Please log in to save to inventory.");
 
-      const res = await fetch("https://ezycomersia-backend.onrender.com", {
+      const res = await fetch("https://ezycomersia-backend.onrender.com/api/pdf/normalize", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -60,7 +60,7 @@ export default function InventoryPage() {
       }
 
       const response = await fetch(
-        "https://ezycomersia-backend.onrender.com",
+        "https://ezycomersia-backend.onrender.com/api/inventory",
         {
           method: "GET",
           headers: {
@@ -125,7 +125,7 @@ export default function InventoryPage() {
       }
 
       const response = await fetch(
-        `https://ezycomersia-backend.onrender.com/${productId}`,
+        `https://ezycomersia-backend.onrender.com/api/inventory/${productId}`,
         {
           method: "DELETE",
           headers: {

@@ -76,7 +76,7 @@ export default function AuditPage() {
         throw new Error("Authentication required. Please log in again.");
       }
 
-      const res = await fetch("https://ezycomersia-backend.onrender.com", {
+      const res = await fetch("https://ezycomersia-backend.onrender.com/api/audit", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -116,7 +116,7 @@ export default function AuditPage() {
       const accessToken = localStorage.getItem("access_token");
       if (!accessToken) throw new Error("Authentication required.");
 
-      const res = await fetch("https://ezycomersia-backend.onrender.com", {
+      const res = await fetch("https://ezycomersia-backend.onrender.com/api/audit/fix", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

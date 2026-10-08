@@ -665,7 +665,7 @@ export default function AgentPage() {
     try {
       const accessToken = localStorage.getItem("access_token");
 
-      const res = await fetch("https://ezycomersia-backend.onrender.com", {
+      const res = await fetch("https://ezycomersia-backend.onrender.com/api/agent", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
