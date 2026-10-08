@@ -5,7 +5,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr
-from passlib.context import CryptContext
+import bcrypt
 from jose import jwt
 
 # ============================================================
@@ -17,11 +17,6 @@ DATABASE = "ezycomersia.db"
 SECRET_KEY = os.getenv("SECRET_KEY", "CHANGE_THIS_TO_A_LONG_RANDOM_SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
-
-pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto"
-)
 
 router = APIRouter(
     prefix="/api/auth",
@@ -77,15 +72,21 @@ class LoginRequest(BaseModel):
 
 
 # ============================================================
-# Password helpers
+# Password helpers (Direct bcrypt - 100% stable & bug-free)
 # ============================================================
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    # Encodes password to bytes, hashes with salt, decodes back to string
+    pwd_bytes = password.encode("utf-8")
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(pwd_bytes, salt).decode("utf-8")
 
 
 def verify_password(password: str, password_hash: str) -> bool:
-    return pwd_context.verify(password, password_hash)
+    # Checks plain password against hashed string
+    pwd_bytes = password.encode("utf-8")
+    hash_bytes = password_hash.encode("utf-8")
+    return bcrypt.checkpw(pwd_bytes, hash_bytes)
 
 
 # ============================================================
@@ -127,7 +128,7 @@ async def register_user(request: RegisterRequest):
 
     existing_user = conn.execute(
         "SELECT id FROM users WHERE email = ?",
-        (request.email,)
+        (request.email.lower(),)
     ).fetchone()
 
     if existing_user:

@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api/audit", tags=["Audit"])
 # ---------------------------------------------------------
 # Internal AI Configuration
 # ---------------------------------------------------------
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = os.getenv("AIzaSyBkICjZMPyFLy02wiLuKXKuQNiWyks1JZg")
 
 if not GEMINI_API_KEY:
     raise RuntimeError("GEMINI_API_KEY is not configured in backend/.env")
