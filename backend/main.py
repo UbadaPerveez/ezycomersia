@@ -24,8 +24,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://ezycomersia.vercel.app",
-        "https://ezycomersia-ml0jaatr4-ubadaperveez.vercel.app"
     ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

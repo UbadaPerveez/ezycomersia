@@ -72,18 +72,16 @@ class LoginRequest(BaseModel):
 
 
 # ============================================================
-# Password helpers (Direct bcrypt - 100% stable & bug-free)
+# Password helpers (Direct bcrypt - 100% stable)
 # ============================================================
 
 def hash_password(password: str) -> str:
-    # Encodes password to bytes, hashes with salt, decodes back to string
     pwd_bytes = password.encode("utf-8")
     salt = bcrypt.gensalt()
     return bcrypt.hashpw(pwd_bytes, salt).decode("utf-8")
 
 
 def verify_password(password: str, password_hash: str) -> bool:
-    # Checks plain password against hashed string
     pwd_bytes = password.encode("utf-8")
     hash_bytes = password_hash.encode("utf-8")
     return bcrypt.checkpw(pwd_bytes, hash_bytes)
@@ -112,7 +110,7 @@ def create_access_token(user_id: int, email: str) -> str:
 
 
 # ============================================================
-# Register
+# Register Endpoint
 # ============================================================
 
 @router.post("/register")
@@ -181,7 +179,7 @@ async def register_user(request: RegisterRequest):
 
 
 # ============================================================
-# Login
+# Login Endpoint
 # ============================================================
 
 @router.post("/login")
