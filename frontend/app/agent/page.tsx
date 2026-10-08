@@ -945,7 +945,7 @@ function NormalizationCard({
         formatValue(data.part_number) ||
         `SKU-${Math.floor(100000 + Math.random() * 900000)}`;
 
-      const res = await fetch("https://ezycomersia-backend.onrender.com", {
+      const res = await fetch("https://ezycomersia-backend.onrender.com/api/agent", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -64,7 +64,7 @@ export default function PDFNormalizerPage() {
       const formData = new FormData();
       formData.append("file", selectedFile);
 
-      const res = await fetch("https://ezycomersia-backend.onrender.com", {
+      const res = await fetch("https://ezycomersia-backend.onrender.com/api/pdf/normalize", {
         method: "POST",
         headers: {
           ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),

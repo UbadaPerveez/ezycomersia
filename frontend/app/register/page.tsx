@@ -19,7 +19,7 @@ export default function RegisterPage() {
 
   try {
     const response = await fetch(
-      "https://ezycomersia-backend.onrender.com",
+      "https://ezycomersia-backend.onrender.com/api/auth/register",
       {
         method: "POST",
         headers: {
